@@ -22,7 +22,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gitopsv1alpha1 "github.com/weaveworks/cluster-controller/api/v1alpha1"
 	clustersv1alpha1 "github.com/weaveworks/cluster-reflector-controller/api/v1alpha1"
@@ -57,11 +56,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	assert.NoError(t, err)
 
-	mgr, err := manager.New(cfg, manager.Options{
-		Scheme: scheme,
-	})
-	assert.NoError(t, err)
-
 	t.Run("Reconcile with AKS", func(t *testing.T) {
 		aksCluster := newAutomatedClusterDiscovery("test-aks",
 			aksProviderOption("subscription-123"))
@@ -89,8 +83,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
 
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
@@ -188,8 +180,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			EventRecorder:   &mockEventRecorder{},
 		}
 
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
 		err = k8sClient.Create(ctx, aksCluster)
@@ -256,8 +246,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
 
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
@@ -330,8 +318,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			EventRecorder:   &mockEventRecorder{},
 		}
 
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
 		err = k8sClient.Create(ctx, aksCluster)
@@ -398,8 +384,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			EventRecorder:   &mockEventRecorder{},
 		}
 
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
 		err = k8sClient.Create(ctx, aksCluster)
@@ -458,8 +442,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(aksCluster)})
 		assert.NoError(t, err)
 
@@ -517,8 +499,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(aksCluster)})
 		assert.NoError(t, err)
 
@@ -573,8 +553,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
 
 		key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
 		err = k8sClient.Create(ctx, aksCluster)
@@ -636,8 +614,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   &mockEventRecorder{},
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(aksCluster)})
 		assert.NoError(t, err)
 
@@ -701,8 +677,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			Scheme:          scheme,
 			ProviderFactory: testProviderFactory(&testProvider),
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(aksCluster)})
 		assert.Error(t, err)
 
@@ -771,8 +745,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 			EventRecorder:   mockEventRecorder,
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(aksCluster)})
 		assert.NoError(t, err)
 
@@ -846,8 +818,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: testProviderFactory(&testProvider),
 		}
 
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
-
 		ctx := context.TODO()
 		key := types.NamespacedName{Name: capiCluster.Name, Namespace: capiCluster.Namespace}
 		err = k8sClient.Create(ctx, capiCluster)
@@ -914,7 +884,6 @@ func TestAutomatedClusterDiscoveryReconciler(t *testing.T) {
 			ProviderFactory: DefaultProviderFactory,
 			EventRecorder:   &mockEventRecorder{},
 		}
-		assert.NoError(t, reconciler.SetupWithManager(mgr))
 
 		typeTests := []struct {
 			discoveryType string
@@ -968,11 +937,6 @@ func TestReconcilingWithAnnotationChange(t *testing.T) {
 	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	assert.NoError(t, err)
 
-	mgr, err := manager.New(cfg, manager.Options{
-		Scheme: scheme,
-	})
-	assert.NoError(t, err)
-
 	aksCluster := &clustersv1alpha1.AutomatedClusterDiscovery{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-aks",
@@ -997,7 +961,6 @@ func TestReconcilingWithAnnotationChange(t *testing.T) {
 		ProviderFactory: testProviderFactory(&stubProvider{}),
 		EventRecorder:   &mockEventRecorder{},
 	}
-	assert.NoError(t, reconciler.SetupWithManager(mgr))
 
 	key := types.NamespacedName{Name: aksCluster.Name, Namespace: aksCluster.Namespace}
 	_, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: key})

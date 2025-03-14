@@ -40,20 +40,20 @@ func NewAzureProvider(subscriptionID string) *AzureProvider {
 func (p *AzureProvider) ListClusters(ctx context.Context) ([]*providers.ProviderCluster, error) {
 	client, err := p.ClientFactory(p.SubscriptionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %v", err)
+		return nil, fmt.Errorf("creating client: %w", err)
 	}
 
 	pager := client.NewListPager(nil)
-	clusters := []*providers.ProviderCluster{}
+	var clusters []*providers.ProviderCluster
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return nil, fmt.Errorf("getting clusters: %w", err)
 		}
 		for _, aksCluster := range nextResult.Value {
 			kubeConfig, err := getKubeconfigForCluster(ctx, client, aksCluster)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get kubeconfig for cluster: %v", err)
+				return nil, fmt.Errorf("getting kubeconfig for cluster: %w", err)
 			}
 
 			clusters = append(clusters, &providers.ProviderCluster{
@@ -100,7 +100,7 @@ func keysFromConfigMap(configMap *corev1.ConfigMap, keys ...string) map[string]s
 func getKubeconfigForCluster(ctx context.Context, client AKSClusterClient, aksCluster *acs.ManagedCluster) (*clientcmdapi.Config, error) {
 	resourceGroup, err := aksClusterResourceGroup(*aksCluster.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster resource group: %v", err)
+		return nil, fmt.Errorf("getting cluster resource group for %s: %w", *aksCluster.ID, err)
 	}
 
 	credentialsResponse, err := client.ListClusterAdminCredentials(ctx,
@@ -108,9 +108,8 @@ func getKubeconfigForCluster(ctx context.Context, client AKSClusterClient, aksCl
 		*aksCluster.Name,
 		&acs.ManagedClustersClientListClusterAdminCredentialsOptions{ServerFqdn: nil},
 	)
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster credentials: %v", err)
+		return nil, fmt.Errorf("getting cluster credentials: %w", err)
 	}
 
 	var kubeConfig *clientcmdapi.Config
@@ -118,7 +117,7 @@ func getKubeconfigForCluster(ctx context.Context, client AKSClusterClient, aksCl
 		kubeConfigBytes := credentialsResponse.Kubeconfigs[0].Value
 		kubeConfig, err = clientcmd.Load(kubeConfigBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load kubeconfig: %v", err)
+			return nil, fmt.Errorf("parsing kubeconfig from %s: %w", *aksCluster.ID, err)
 		}
 	}
 
@@ -128,8 +127,9 @@ func getKubeconfigForCluster(ctx context.Context, client AKSClusterClient, aksCl
 func aksClusterResourceGroup(clusterID string) (string, error) {
 	resource, err := azure.ParseResourceID(clusterID)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse cluster resource group from id: %v", err)
+		return "", fmt.Errorf("parsing resource ID: %w", err)
 	}
+
 	return resource.ResourceGroup, nil
 }
 
@@ -138,11 +138,11 @@ func aksClusterResourceGroup(clusterID string) (string, error) {
 func clientFactory(subscriptionID string) (AKSClusterClient, error) {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to obtain a credential: %v", err)
+		return nil, fmt.Errorf("getting Azure credentials: %w", err)
 	}
 	client, err := acs.NewManagedClustersClient(subscriptionID, cred, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %v", err)
+		return nil, fmt.Errorf("creating managed clusters client: %w", err)
 	}
 
 	return client, nil

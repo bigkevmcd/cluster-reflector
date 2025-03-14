@@ -88,10 +88,11 @@ func CreateOrUpdateGitOpsCluster(ctx context.Context, k8sClient client.Client, n
 	lgr.WithValues("cluster", clusterName, "secret", secretName, "namespace", namespace)
 
 	gitOpsCluster := &gitopsv1alpha1.GitopsCluster{}
-	err := k8sClient.Get(ctx, client.ObjectKey{Name: clusterName, Namespace: namespace}, gitOpsCluster)
+	objectKey := client.ObjectKey{Name: clusterName, Namespace: namespace}
+	err := k8sClient.Get(ctx, objectKey, gitOpsCluster)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to get GitopsCluster: %w", err)
+			return nil, fmt.Errorf("failed to get GitopsCluster %s: %w", objectKey, err)
 		}
 
 		gitOpsCluster = &gitopsv1alpha1.GitopsCluster{

@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -57,20 +58,19 @@ func NewAWSProvider(region string) *AWSProvider {
 func (p *AWSProvider) ListClusters(ctx context.Context) ([]*providers.ProviderCluster, error) {
 	client, err := p.ClientFactory(p.Region)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %v", err)
+		return nil, fmt.Errorf("creating client: %w", err)
 	}
 
-	clusters := []*providers.ProviderCluster{}
-	input := &eks.ListClustersInput{}
-	output, err := client.ListClusters(input)
+	output, err := client.ListClusters(&eks.ListClustersInput{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list EKS clusters: %v", err)
+		return nil, fmt.Errorf("listing EKS clusters: %w", err)
 	}
 
+	var clusters []*providers.ProviderCluster
 	for _, clusterName := range output.Clusters {
 		kubeConfig, err := getKubeconfigForCluster(ctx, client, *clusterName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get kubeconfig for cluster %s: %v", *clusterName, err)
+			return nil, fmt.Errorf("getting kubeconfig for cluster %s: %w", *clusterName, err)
 		}
 
 		clusters = append(clusters, &providers.ProviderCluster{
@@ -87,11 +87,11 @@ func (p *AWSProvider) ListClusters(ctx context.Context) ([]*providers.ProviderCl
 func (p *AWSProvider) ClusterID(ctx context.Context, kubeClient client.Reader) (string, error) {
 	nodes := &corev1.NodeList{}
 	if err := kubeClient.List(ctx, nodes); err != nil {
-		return "", fmt.Errorf("failed to list nodes: %v", err)
+		return "", fmt.Errorf("listing nodes in cluster: %w", err)
 	}
 
 	if len(nodes.Items) == 0 {
-		return "", fmt.Errorf("no nodes found")
+		return "", errors.New("no nodes found")
 	}
 
 	node := nodes.Items[0]
@@ -111,12 +111,12 @@ func getKubeconfigForCluster(ctx context.Context, client *awsAPIs, clusterName s
 
 	describeOutput, err := client.eksAPI.DescribeCluster(describeInput)
 	if err != nil {
-		return nil, fmt.Errorf("failed to describe EKS cluster %s: %v", clusterName, err)
+		return nil, fmt.Errorf("describing EKS cluster %s: %w", clusterName, err)
 	}
 
 	kubeConfig, err := generateKubeconfig(describeOutput.Cluster, client.stsAPI, clusterName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate kubeconfig for cluster %s: %v", clusterName, err)
+		return nil, fmt.Errorf("generating kubeconfig for cluster %s: %w", clusterName, err)
 	}
 
 	return kubeConfig, nil
@@ -183,7 +183,7 @@ func clientFactory(region string) (*awsAPIs, error) {
 
 	session, err := session.NewSession(awsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %v", err)
+		return nil, fmt.Errorf("creating a session: %w", err)
 	}
 
 	return &awsAPIs{

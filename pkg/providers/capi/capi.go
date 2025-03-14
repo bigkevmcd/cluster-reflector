@@ -2,6 +2,7 @@ package capi
 
 import (
 	"context"
+	"fmt"
 
 	clustersv1alpha1 "github.com/weaveworks/cluster-reflector-controller/api/v1alpha1"
 	"github.com/weaveworks/cluster-reflector-controller/pkg/providers"
@@ -9,18 +10,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// CAPIProvider queries a Kubernetes cluster for CAPI Cluster resources.
 type CAPIProvider struct {
 	Namespace            string
 	ManagementClusterRef clustersv1alpha1.Cluster
-	Kubeclient           client.Reader
+	Client               client.Reader
 }
 
 var _ providers.Provider = (*CAPIProvider)(nil)
 
-// NewCAPIProvider creates and returns a CAPIProvider ready for use
+// NewCAPIProvider creates and returns a CAPIProvider ready for use.
 func NewCAPIProvider(client client.Reader, namespace string, managementClusterRef clustersv1alpha1.Cluster) *CAPIProvider {
 	provider := &CAPIProvider{
-		Kubeclient:           client,
+		Client:               client,
 		Namespace:            namespace,
 		ManagementClusterRef: managementClusterRef,
 	}
@@ -28,15 +30,13 @@ func NewCAPIProvider(client client.Reader, namespace string, managementClusterRe
 }
 
 func (p *CAPIProvider) ListClusters(ctx context.Context) ([]*providers.ProviderCluster, error) {
-	kubeClient := p.Kubeclient
 	capiClusters := &capiclusterv1.ClusterList{}
-	err := kubeClient.List(ctx, capiClusters, &client.ListOptions{Namespace: p.Namespace})
+	err := p.Client.List(ctx, capiClusters, &client.ListOptions{Namespace: p.Namespace})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying CAPI clusters: %w", err)
 	}
 
-	clusters := []*providers.ProviderCluster{}
-
+	var clusters []*providers.ProviderCluster
 	for _, capiCluster := range capiClusters.Items {
 		clusters = append(clusters, &providers.ProviderCluster{
 			Name:       capiCluster.Name,
@@ -49,7 +49,7 @@ func (p *CAPIProvider) ListClusters(ctx context.Context) ([]*providers.ProviderC
 	return clusters, nil
 }
 
-// ProviderCluster has an ID to identify the cluster, but capi cluster doesn't have a Cluster ID
+// ProviderCluster has an ID to identify the cluster, but CAPI cluster doesn't have a Cluster ID
 // therefore wont't match in the case of CAPI
 func (p *CAPIProvider) ClusterID(ctx context.Context, kubeClient client.Reader) (string, error) {
 	return p.ManagementClusterRef.String(), nil
